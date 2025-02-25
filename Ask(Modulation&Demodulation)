@@ -1,0 +1,102 @@
+clc;
+clear;
+close();
+x = [1 0 0  0 1 1 1];  
+N = length(x);  
+Tb = 0.0001;  
+disp('Binary Input Information at Transmitter:');  
+disp(x);
+
+nb = 100;  
+digit = [];  
+for n = 1:N  
+    if x(n) == 1 then  
+        sig = ones(1, nb);  
+    else  
+        sig = zeros(1, nb);  
+    end  
+    digit = [digit, sig];  
+end  
+
+t1 = Tb/nb : Tb/nb : nb*N*(Tb/nb);  
+scf(1);  
+subplot(3, 1, 1);  
+h1 = plot(t1, digit);  
+set(h1, "thickness", 1);  
+xgrid();  
+a = gca();  
+a.data_bounds = [0, -0.5; Tb*N, 1.5];  
+xlabel('Time(Sec)');  
+ylabel('Amplitude(Volts)');  
+xtitle('Digital Input Signal');
+
+Ac1 = 12;  
+Ac2 = 5;  
+br = 1/Tb;  
+Fc = br * 10;  
+t2 = Tb/nb : Tb/nb : Tb;  
+modulated = [];  
+
+for i = 1:N  
+    if x(i) == 1 then  
+        y = Ac1 * cos(2 * %pi * Fc * t2);  
+    else  
+        y = Ac2 * cos(2 * %pi * Fc * t2);  
+    end  
+    modulated = [modulated, y];  
+end  
+
+t3 = Tb/nb : Tb/nb : Tb*N;  
+subplot(3, 1, 2);  
+h2 = plot(t3, modulated);  
+set(h2, "thickness", 1);  
+xlabel('Time(Sec)');  
+ylabel('Amplitude(Volts)');  
+xtitle('ASK Modulated Signal');
+
+x_signal = modulated;  
+h = 1;  
+w = 0;  
+y_signal = h .* x_signal + w;  
+s = length(t2);  
+demod = [];  
+
+for n = s : s : length(y_signal)  
+    t4 = Tb/nb : Tb/nb : Tb;  
+    c = cos(2 * %pi * Fc * t4);  
+    mm = c .* y_signal((n - (s - 1)) : n);  
+    z = sum(mm) * (Tb/nb);  
+    rz = round(2 * z / Tb);  
+    Ac = (Ac1 + Ac2) / 2;  
+
+    if rz > Ac then  
+        a_bit = 1;  
+    else  
+        a_bit = 0;  
+    end  
+    demod = [demod, a_bit];  
+end  
+
+disp('Demodulated Binary Information at Receiver:');  
+disp(demod);
+
+digit_demod = [];  
+for n = 1:length(demod)  
+    if demod(n) == 1 then  
+        sig = ones(1, nb);  
+    else  
+        sig = zeros(1, nb);  
+    end  
+    digit_demod = [digit_demod, sig];  
+end  
+
+t_final = Tb/nb : Tb/nb : nb * length(demod) * (Tb/nb);  
+subplot(3, 1, 3);  
+h3 = plot(t_final, digit_demod);  
+set(h3, "thickness", 1);  
+xgrid();  
+a = gca();  
+a.data_bounds = [0, -0.5; Tb * length(demod), 1.5];  
+xlabel('Time(Sec)');  
+ylabel('Amplitude(Volts)');  
+xtitle('ASK Demodulated Signal');
