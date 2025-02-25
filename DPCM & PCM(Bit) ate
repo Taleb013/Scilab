@@ -1,0 +1,85 @@
+clear;
+clc;
+
+t = 0:0.001:1;
+x = sin(2 * %pi * 5 * t);
+q_step = 0.1;
+
+x_pcm = q_step * round(x / q_step);
+error_pcm = x - x_pcm;
+mse_pcm = mean(error_pcm.^2);
+SNR_pcm = 10 * log10(sum(x.^2) / sum(error_pcm.^2));
+
+min_val = min(x);
+max_val = max(x);
+levels_pcm = ceil((max_val - min_val) / q_step) + 1;
+bits_pcm = ceil(log2(levels_pcm));
+
+function [encoded, decoded] = dpcm(x, q_step)
+    N = length(x);
+    encoded = zeros(1, N);
+    decoded = zeros(1, N);
+    decoded(1) = q_step * round(x(1) / q_step);
+    encoded(1) = decoded(1);
+    for n = 2:N
+        pred = decoded(n-1);
+        diff = x(n) - pred;
+        q_diff = q_step * round(diff / q_step);
+        encoded(n) = q_diff;
+        decoded(n) = pred + q_diff;
+    end
+endfunction
+
+[encoded_dpcm, decoded_dpcm] = dpcm(x, q_step);
+error_dpcm = x - decoded_dpcm;
+mse_dpcm = mean(error_dpcm.^2);
+SNR_dpcm = 10 * log10(sum(x.^2) / sum(error_dpcm.^2));
+
+if length(encoded_dpcm) > 1 then
+    diff_min = min(encoded_dpcm(2:$));
+    diff_max = max(encoded_dpcm(2:$));
+    levels_dpcm_diff = ceil((diff_max - diff_min) / q_step) + 1;
+    bits_dpcm_diff = ceil(log2(levels_dpcm_diff));
+else
+    bits_dpcm_diff = 0;
+end
+
+N = length(x);
+bits_dpcm_first = bits_pcm;
+bits_dpcm_avg = (bits_dpcm_first + (N-1) * bits_dpcm_diff) / N;
+
+disp("=========================================");
+disp("         PCM vs. DPCM Comparison         ");
+disp("=========================================");
+disp("PCM:");
+disp("  Bits per sample: " + string(bits_pcm));
+disp("  MSE: " + string(mse_pcm));
+disp("  SNR (dB): " + string(SNR_pcm));
+disp("DPCM:");
+disp("  Bits for first sample: " + string(bits_dpcm_first));
+disp("  Bits for differences: " + string(bits_dpcm_diff));
+disp("  Average bits per sample: " + string(bits_dpcm_avg));
+disp("  MSE: " + string(mse_dpcm));
+disp("  SNR (dB): " + string(SNR_dpcm));
+
+scf(0); clf;
+subplot(2,1,1);
+plot(t, x, 'b', t, x_pcm, 'r--');
+legend("Original Signal", "PCM Reconstructed");
+title("PCM: Original vs. Reconstructed Signal");
+xlabel("Time (s)"); ylabel("Amplitude");
+subplot(2,1,2);
+plot(t, x, 'b', t, decoded_dpcm, 'r--');
+legend("Original Signal", "DPCM Reconstructed");
+title("DPCM: Original vs. Reconstructed Signal");
+xlabel("Time (s)"); ylabel("Amplitude");
+
+scf(1); clf;
+subplot(2,1,1);
+plot(t, error_pcm, 'g');
+title("PCM Quantization Error");
+xlabel("Time (s)"); ylabel("Error");
+subplot(2,1,2);
+plot(t, encoded_dpcm, 'm');
+title("DPCM Encoded Differences");
+xlabel("Time (s)"); ylabel("Quantized Difference");
