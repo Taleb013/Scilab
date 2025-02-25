@@ -1,0 +1,57 @@
+clc;
+clear;
+close;
+
+t = 0:0.001:1;
+f = 5;
+x = sin(2 * %pi * f * t);
+delta = 0.1;
+
+dm_out = zeros(x);
+prev = 0;
+for i = 1:length(x)
+    if x(i) > prev then
+        dm_out(i) = prev + delta;
+    else
+        dm_out(i) = prev - delta;
+    end
+    prev = dm_out(i);
+end
+
+demod_out = zeros(x);
+demod_out(1) = dm_out(1);
+for i = 2:length(dm_out)
+    demod_out(i) = demod_out(i-1) + (dm_out(i) - dm_out(i-1));
+end
+
+alpha = 0.05;
+smoothed_demod = demod_out;
+for i = 2:length(demod_out)
+    smoothed_demod(i) = alpha * demod_out(i) + (1 - alpha) * smoothed_demod(i-1);
+end
+
+scf(0);
+subplot(4,1,1);
+plot(t, x, 'g');
+title("Original Signal");
+xlabel("Time");
+ylabel("Amplitude");
+xgrid();
+subplot(4,1,2);
+plot(t, dm_out, 'b');
+title("Delta Modulated Signal");
+xlabel("Time");
+ylabel("Amplitude");
+xgrid();
+subplot(4,1,3);
+plot(t, demod_out, 'r');
+title("Raw Demodulated Signal");
+xlabel("Time");
+ylabel("Amplitude");
+xgrid();
+subplot(4,1,4);
+plot(t, smoothed_demod, 'm');
+title("Smoothed Demodulated Signal");
+xlabel("Time");
+ylabel("Amplitude");
+xgrid();
