@@ -1,0 +1,142 @@
+Experiment no.1 To calculate the numerical aperture of the optical fiber;
+clear;
+close;
+clc;
+n1 = input("enter the value of core refractive index: ");
+n2 = input("enter the value of cladding refractive index: ");
+delta = (n1^2 - n2^2) / (2 * n1^2);
+NA = n1 * sqrt(2 * delta);
+accept = asind(NA);
+disp(NA, "numerical aperture = ");
+disp(accept, "acceptance angle = ");
+
+Experiment no.2 To calculate the Bending Loss in
+ the optical fiber in the link .
+clear;
+close;
+clc;
+n1 = input("enter the value of core refractive index: ");
+n2 = input("enter the value of cladding refractive index: ");
+R = input("enter the value of radius of curvature of bend in m: ");
+lambda = input("enter the value of wavelength in micrometer: ");
+c1 = 1.2;
+c2 = 0.5;
+delta = (n1^2 - n2^2) / (2 * n1^2);
+Rc = (3 * lambda * 1e-6) / (4 * %pi * 2 * delta);
+alpha = c1 * exp(-c2 * R);
+alphadb = 10 * log(alpha);
+disp(alphadb, "Bending loss in dB = ");
+disp(Rc, "Critical radius in m = ");
+
+
+Experiment no.3 To plot the responsivity curve for
+ the given detector material .
+clear;
+clc;
+
+Eg = input("Band gap of material selected in eV: ");
+e = 1.6e-19;
+eta = 0.65;
+h = 6.626e-34;
+c = 3e8;
+
+lambdacf = h * c / (Eg * e * 1e-6);
+lambda = 0:0.25:2;
+
+responsivity = zeros(lambda);
+
+for i = 1:length(lambda)
+    if lambda(i) < lambdacf then
+        responsivity(i) = eta * e * 1e-6 * lambda(i) / (h * c);
+    else
+        responsivity(i) = 0;
+    end
+end
+
+plot2d(lambda, responsivity);
+xtitle("Responsivity Curve", "Lambda (µm)", "Responsivity");
+
+
+Experiment no.4 To plot the characteristic curve
+ f or LED.clear;
+close;
+clc;
+
+h = 6.626e-34;
+c = 3e8;
+e = 1.6e-19;
+lambda = 0.87e-6;
+tr = 60e-9;
+tnr = 100e-9;
+t = tr * tnr / (tr + tnr);
+Nint = t / tnr;
+
+I_mA = 1:40;          // current in mA for plotting
+I = I_mA * 1e-3;      // current in A for calculation
+
+pint = zeros(1, length(I));
+for k = 1:length(I)
+    pint(k) = Nint * I(k) * h * c * 1e-3 / (e * lambda);
+end
+
+plot2d(I_mA, pint);
+xtitle("Characteristics of LED", "Current (mA)", "Power (W)");
+
+Experiment no.5 To calculate material dispersion
+clear;
+close;
+clc;
+
+L0 = input("Enter the value of zero dispersion wavelength (µm): ");
+S0 = input("Enter the value of slope at zero dispersion wavelength: ");
+
+lambda = 0.7:0.1:1.7; // wavelength in µm
+MD = (lambda .* S0 / 4) .* (1 - (L0 ./ lambda).^4);
+
+plot2d(lambda, MD);
+xtitle("Material Dispersion at Various Wavelengths", "Wavelength (µm)", "Material Dispersion (ps/nm·km)");
+
+
+Experiment no.6 To do power budgeting 
+clear;
+close;
+clc;
+
+Ps = input("Power from source in dBm: ");
+Pr = input("Sensitivity of receiver in dBm: ");
+L  = input("Link length in Km: ");
+Loss = input("Fiber loss in dB/Km: ");
+SL = input("Splice loss in dB/Km: ");
+CL = input("Coupling loss in dB: ");
+EL = input("Excess loss in dB: ");
+
+Pt = Ps - Pr;
+SM = Pt - (2*CL + Loss*L + SL*L + EL);
+
+disp(SM, "System margin (dB) = ");
+
+
+Experiment no.7 To do rise time budgeting
+clear;
+close;
+clc;
+
+ts = input("Rise time of the LED source in ns: ");
+IMD = input("Intermodal dispersion in ns/Km: ");
+L = input("Link length in Km: ");
+PB = input("Pulse broadening in ns/Km: ");
+td = input("Response time of detector in ns: ");
+
+disp("Select format: 1 - RZ (Return to Zero), 2 - NRZ (Non Return to Zero)");
+F = input("Format: ");
+
+Tsys = 1.1 * sqrt(ts^2 + (L * IMD)^2 + td^2 + (L * PB)^2);
+
+if F == 1 then
+    Bt = 0.35 * 1e3 / Tsys; // in Mbps
+else
+    Bt = 0.7 * 1e3 / Tsys;  // in Mbps
+end
+
+disp(Bt, "Maximum bit rate for the link (Mbps) = ");
+

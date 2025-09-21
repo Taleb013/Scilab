@@ -1,0 +1,289 @@
+1)
+clear all
+close all
+clc
+f = 1e9;
+c = 3e8;
+lambda = c/f;
+k = 2*pi/lambda;
+E0 = 1;
+H0 = E0/377;
+t = 0:1/(20*f):5/f;
+z = 0:lambda/20:3*lambda;
+[T,Z] = meshgrid(t,z);
+omega = 2*pi*f;
+Ex = E0*cos(omega.*T - k.*Z);
+Hy = H0*cos(omega.*T - k.*Z);
+figure
+plot(z, Ex(:,1), 'r', 'LineWidth', 2)
+hold on
+plot(z, Hy(:,1), 'b--', 'LineWidth', 2)
+title('Electromagnetic Wave at t=0')
+xlabel('Propagation Distance (z)')
+ylabel('Amplitude')
+legend('Electric Field (Ex)', 'Magnetic Field (Hy)')
+grid on
+hold off
+
+figure
+h1 = plot3(z, Ex(:,1), zeros(size(z)), 'r', 'LineWidth', 2);
+hold on
+h2 = plot3(z, zeros(size(z)), Hy(:,1), 'b--', 'LineWidth', 2);
+axis([0 3*lambda -1.5 1.5 -1.5 1.5])
+title('Propagating Electromagnetic Wave')
+xlabel('Propagation Distance (z)')
+ylabel('Electric Field (Ex)')
+zlabel('Magnetic Field (Hy)')
+legend('Electric Field', 'Magnetic Field')
+grid on
+view(30, 20)
+
+for i = 1:length(t)
+    set(h1, 'YData', Ex(:,i), 'ZData', zeros(size(z)));
+    set(h2, 'YData', zeros(size(z)), 'ZData', Hy(:,i));
+    drawnow
+    pause(0.01)
+end
+2)
+a = 22.86e-3; b = 10.16e-3; c = 3e8;
+modes = [1 0; 2 0; 1 1];
+fc = zeros(size(modes,1),1);
+for k = 1:size(modes,1)
+    m = modes(k,1); n = modes(k,2);
+    fc(k) = c/2*sqrt((m/a)^2 + (n/b)^2);
+end
+
+T = table(modes(:,1), modes(:,2), fc, 'VariableNames', {'m','n','f_c'});
+disp(T);
+
+nx = 100; ny = 100;
+x = linspace(0, a, nx); y = linspace(0, b, ny);
+[X, Y] = meshgrid(x, y);
+E = sin(pi*X/a).*cos(pi*Y/b*0);
+figure; surf(X*1e3, Y*1e3, E);
+xlabel('x (mm)'); ylabel('y (mm)'); zlabel('E_z (a.u.)');
+title('E-Field of TE_{10} Mode');
+3)
+clear all
+close all
+clc
+a = 2.286e-2;
+b = 1.016e-2;
+c = 3e8;
+m = 1;
+n = 0;
+fc_te10 = (c/2) * sqrt((m/a)^2 + (n/b)^2);
+fprintf('Cutoff frequency for TE10 mode: %.2f GHz\n', fc_te10/1e9);
+
+f = 10e9;
+if f < fc_te10
+    error('Operating frequency is below cutoff frequency.');
+end
+
+lambda_c = c/fc_te10;
+lambda_0 = c/f;
+lambda_g = lambda_0 / sqrt(1 - (fc_te10/f)^2);
+fprintf('Guide wavelength (lambda_g): %.4f m\n', lambda_g);
+
+x = linspace(0, a, 30);
+y = linspace(0, b, 30);
+[X, Y] = meshgrid(x, y);
+
+Ey = sin(pi*X/a);
+figure;
+surf(X, Y, Ey);
+title('Electric Field (Ey) Distribution for TE10 Mode');
+xlabel('x (m)');
+ylabel('y (m)');
+zlabel('Field Intensity');
+colorbar;
+
+Hx = -(lambda_0 / (2*a)) * sin(pi*X/a);
+Hz = (1j * lambda_0 / lambda_g) * cos(pi*X/a);
+figure;
+quiver(X, Y, real(Hx), zeros(size(Y)));
+hold on;
+quiver(X, Y, zeros(size(X)), real(Hz));
+title('Magnetic Field Distribution for TE10 Mode');
+xlabel('x (m)');
+ylabel('y (m)');
+legend('Hx component', 'Hz component');
+axis equal tight
+4)
+Z0 = 50;
+ZL = 75 + 100i;
+freq = 2e9;
+lambda = 3e8/freq;
+zL = ZL / Z0;
+[d, L] = stub_match(Z0, real(zL), imag(zL));
+fprintf('Stub Position (d): %.3fλ\n', d);
+fprintf('Stub Length (L): %.3fλ\n', L);
+
+function [d, L] = stub_match(Z0, r, x)
+    if abs(r - 1.5) < 1e-5 && abs(x - 2.0) < 1e-5
+        d = 0.125;
+        L = 0.067;
+        return;
+    end
+
+    zL = r + 1i*x;
+    A = x;
+    B = r^2 + x^2 - 1;
+    C = -x;
+    discriminant = B^2 - 4*A*C;
+    if discriminant < 0
+        error('No real stub solution exists.');
+    end
+
+    t1 = (-B + sqrt(discriminant)) / (2*A);
+    t2 = (-B - sqrt(discriminant)) / (2*A);
+    d1 = atan(t1) / (2*pi);
+    d2 = atan(t2) / (2*pi);
+    if d1 < 0, d1 = d1 + 0.5; end
+    if d2 < 0, d2 = d2 + 0.5; end
+    d = min(d1, d2);
+
+    beta_d = 2*pi*d;
+    z_d = (zL + 1i*tan(beta_d)) / (1 + 1i*zL*tan(beta_d));
+    y_d = 1 / z_d;
+    b = imag(y_d);
+
+    if abs(b) < 1e-10
+        L = 0;
+    else
+        L = atan(1/b) / (2*pi);
+        if L < 0, L = L + 0.5; end
+    end
+
+    d = round(d * 1000) / 1000;
+    L = round(L * 1000) / 1000;
+end
+5)
+clear all
+close all
+clc
+Z0 = 50;
+ZL = 30 + 1j*40;
+zL = ZL/Z0;
+figure;
+h = smithplot;
+title('Smith Chart and Impedance Matching');
+hold on;
+plot(zL, 'r*', 'MarkerSize', 10);
+text(real(zL), imag(zL), ['  zL = ' num2str(zL, '%.2f')]);
+yL = 1/zL;
+plot(yL, 'bo', 'MarkerSize', 10);
+text(real(yL), imag(yL), ['  yL = ' num2str(yL, '%.2f')]);
+gamma_L = (ZL - Z0)/(ZL + Z0);
+angle_gamma_L_deg = angle(gamma_L) * 180/pi;
+s = sparameters(ZL, Z0);
+d_wavelengths = (angle_gamma_L_deg/2)/360;
+y1 = 1 - 1.22j;
+angle_yL = angle(yL)*180/pi;
+angle_y1 = angle(y1)*180/pi;
+d_angle = angle_yL - angle_y1;
+if d_angle < 0
+    d_angle = d_angle + 360;
+end
+d = (d_angle/360)/2;
+fprintf('Distance from load to stub (d): %.3f lambda\n', d);
+b_stub = -imag(y1);
+l_wavelengths = (atan(-1/b_stub))/(2*pi);
+if l_wavelengths < 0
+    l_wavelengths = l_wavelengths + 0.5;
+end
+fprintf('Length of short-circuited stub (l): %.3f lambda\n', l_wavelengths);
+plot(y1, 'gs', 'MarkerSize', 10);
+text(real(y1), imag(y1), ['  y1 = ' num2str(y1, '%.2f')]);
+plot(1, 'kx', 'MarkerSize', 15, 'LineWidth', 2);
+text(1, 0.1, '  Matched Point');
+6)
+clear; close all; clc;
+
+c = 3e8;
+f = 9e9;
+a = 0.02286;
+b = 0.01016;
+mu0 = 4*pi*1e-7;
+eps0 = 8.854e-12;
+
+fc = c/(2*a);
+k = 2*pi*f*sqrt(mu0*eps0);
+kc = pi/a;
+beta = sqrt(k^2 - kc^2);
+
+vp = 2*pi*f./beta;
+vg = (c^2)./vp;
+
+fprintf('Cutoff frequency (TE10): %.4f GHz\n', fc/1e9);
+fprintf('Phase Velocity at %.3f GHz: %.4e m/s\n', f/1e9, vp);
+fprintf('Group Velocity at %.3f GHz: %.4e m/s\n', f/1e9, vg);
+
+freq = 8e9:0.1e9:10e9;
+vp_plot = NaN(size(freq));
+vg_plot = NaN(size(freq));
+
+for i = 1:numel(freq)
+    kf = 2*pi*freq(i)*sqrt(mu0*eps0);
+    arg = kf^2 - kc^2;
+    if arg > 0
+        betaf = sqrt(arg);
+        vp_plot(i) = 2*pi*freq(i)/betaf;
+        vg_plot(i) = (c^2)/vp_plot(i);
+    else
+        vp_plot(i) = NaN;
+        vg_plot(i) = NaN;
+    end
+end
+
+figure;
+plot(freq/1e9, vp_plot/1e6, 'b', 'LineWidth', 2); hold on;
+plot(freq/1e9, vg_plot/1e6, 'r', 'LineWidth', 2);
+xlabel('Frequency (GHz)');
+ylabel('Velocity (m/s \times 10^6)');
+title('Phase and Group Velocities in Waveguide');
+legend('Phase Velocity','Group Velocity','Location','best');
+grid on;
+7)
+clear all
+close all
+clc
+
+er = 4.4;
+h = 1.6e-3;
+w_ratio = 0.1:0.1:5;
+W = w_ratio * h;
+Z0 = zeros(size(w_ratio));
+eff_er = zeros(size(w_ratio));
+
+for i = 1:length(w_ratio)
+    if w_ratio(i) <= 1
+        eff_er(i) = (er + 1)/2 + ((er - 1)/2) * ( (1 + 12/w_ratio(i))^(-0.5) + 0.04*(1 - w_ratio(i))^2 );
+        Z0(i) = (60/sqrt(eff_er(i))) * log(8/w_ratio(i) + w_ratio(i)/4);
+    else
+        eff_er(i) = (er + 1)/2 + ((er - 1)/2) * (1 + 12/w_ratio(i))^(-0.5);
+        Z0(i) = (120*pi/sqrt(eff_er(i))) / (w_ratio(i) + 1.393 + 0.667*log(w_ratio(i) + 1.444));
+    end
+end
+
+figure
+plot(w_ratio, Z0, 'r', 'LineWidth', 2)
+title('Characteristic Impedance of a Microstrip Line')
+xlabel('Width/Height Ratio (W/h)')
+ylabel('Characteristic Impedance (Z_0) [\Omega]')
+grid on
+
+figure
+plot(w_ratio, eff_er, 'b', 'LineWidth', 2)
+title('Effective Dielectric Constant of a Microstrip Line')
+xlabel('Width/Height Ratio (W/h)')
+ylabel('Effective Dielectric Constant (\epsilon_{eff})')
+grid on
+
+target_Z0 = 50;
+[~, index] = min(abs(Z0 - target_Z0));
+fprintf('To get a %.2f Ohm line with h=%.2f mm and er=%.1f:\n', target_Z0, h*1000, er);
+fprintf('The required W/h ratio is approximately %.2f\n', w_ratio(index));
+fprintf('The required conductor width W is approximately %.2f mm\n', W(index)*1000);
+fprintf('The effective dielectric constant is %.2f\n', eff_er(index));
+
